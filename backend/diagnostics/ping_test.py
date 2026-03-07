@@ -6,7 +6,7 @@ def run_ping_test():
         "google_dns": "8.8.8.8",
         "cloudflare": "1.1.1.1",
         "google_dns_backup": "8.8.4.4",
-        "quad9": "9.9.9.9",
+        "quad9": "9.9.9.9"
         # "amazon": "amazon.com" #ping blocked
     }
 
