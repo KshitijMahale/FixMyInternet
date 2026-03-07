@@ -15,3 +15,7 @@ class PacketLossResponse(BaseModel):
     packets_received: int
     packets_lost: int
     packet_loss_percent: float
+
+class SpeedTestResponse(BaseModel):
+    download_mbps: float | None
+    upload_mbps: float | None
