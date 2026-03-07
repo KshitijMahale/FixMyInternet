@@ -1,0 +1,7 @@
+fastapi
+uvicorn
+ping3
+dnspython
+speedtest-cli
+requests
+python-multipart
