@@ -3,6 +3,7 @@ from backend.models.result_model import PingTestResponse
 from backend.diagnostics.ping_test import run_ping_test
 from backend.diagnostics.dns_test import run_dns_test
 from backend.models.result_model import DNSTestResponse
+from backend.analysis.root_cause_engine import analyze_network
 
 router = APIRouter(
     prefix="/diagnostics",
@@ -37,4 +38,19 @@ def speed_test():
 def packet_loss():
     return {
         "message": "Packet loss test endpoint coming soon"
+    }
+
+@router.get("/full-analysis")
+def full_analysis():
+    ping_results = run_ping_test()
+    dns_results = run_dns_test()
+    analysis = analyze_network(
+        ping_results,
+        dns_results
+    )
+
+    return {
+        "ping": ping_results,
+        "dns": dns_results,
+        "analysis": analysis
     }
