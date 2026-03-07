@@ -1,4 +1,5 @@
 from fastapi import FastAPI
+from backend.api.diagnostics_routes import router as diagnostics_router
 
 app = FastAPI(
     title="FixMyInternet API",
@@ -6,16 +7,12 @@ app = FastAPI(
     version="1.0.0"
 )
 
-
 @app.get("/")
 def home():
-    return {
-        "message": "FixMyInternet API is running"
-    }
-
+    return {"message": "FixMyInternet API is running"}
 
 @app.get("/health")
 def health_check():
-    return {
-        "status": "running"
-    }
+    return {"status": "running"}
+
+app.include_router(diagnostics_router)
