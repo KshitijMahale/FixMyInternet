@@ -1,14 +1,19 @@
 from fastapi import APIRouter
+from backend.models.result_model import PingTestResponse
+from backend.diagnostics.ping_test import run_ping_test
 
 router = APIRouter(
     prefix="/diagnostics",
     tags=["Diagnostics"]
 )
 
-@router.get("/ping-test")
+@router.get("/ping-test", response_model=PingTestResponse)
 def ping_test():
+    results = run_ping_test()
+
     return {
-        "message": "Ping test endpoint coming soon"
+        "test": "latency",
+        "results": results
     }
 
 @router.get("/dns-test")
