@@ -7,26 +7,30 @@ def run_ping_test():
         "cloudflare": "1.1.1.1",
         "google_dns_backup": "8.8.4.4",
         "quad9": "9.9.9.9"
-        # "amazon": "amazon.com" #ping blocked
     }
 
     results = {}
 
     for name, host in targets.items():
-        latencies = []
-        try:
-            for _ in range(3): # send 3 ping attempts
-                latency = ping(host, timeout=2)
+        samples = []
 
-                if latency is not None:
-                    latencies.append(latency * 1000)  # convert to ms
+        for _ in range(5):
+            latency = ping(host, timeout=2)
+            if latency is not None:
+                samples.append(latency * 1000)
 
-            if latencies:
-                avg_latency = sum(latencies) / len(latencies)
-                results[name] = round(avg_latency, 2)
-            else:
-                results[name] = None
+        if samples:
+            avg_latency = sum(samples) / len(samples)
+            min_latency = min(samples)
+            max_latency = max(samples)
 
-        except Exception:
+            results[name] = {
+                "avg": round(avg_latency, 2),
+                "min": round(min_latency, 2),
+                "max": round(max_latency, 2),
+                "samples": len(samples)
+            }
+
+        else:
             results[name] = None
     return results

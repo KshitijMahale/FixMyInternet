@@ -48,10 +48,11 @@ def full_analysis():
     speed = run_speed_test()
 
     analysis = analyze_network(
-        ping_results,
-        dns_results,
-        packet_loss
-    )
+    ping_results,
+    dns_results,
+    packet_loss,
+    speed
+)
 
     return {
         "speed": speed,
