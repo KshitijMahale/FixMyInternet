@@ -1,24 +1,38 @@
-from ping3 import ping
+import ping3
+from typing import Dict
+import logging
 
-def run_packet_loss_test(host="1.1.1.1", attempts=20):
-    sent = attempts
-    received = 0
+logger = logging.getLogger(__name__)
 
-    for _ in range(attempts):
-        try:
-            response = ping(host, timeout=2)
-            if response is not None:
-                received += 1
-
-        except Exception:
-            pass
-
-    lost = sent - received
-    loss_percent = (lost / sent) * 100
-
-    return {
-        "packets_sent": sent,
-        "packets_received": received,
-        "packets_lost": lost,
-        "packet_loss_percent": round(loss_percent, 2)
-    }
+class PacketLossTest:
+    def __init__(self):
+        self.target = "1.1.1.1"
+        self.count = 20
+        ping3.EXCEPTIONS = True
+    
+    def run_test(self) -> Dict:
+        """Test for packet loss"""
+        packets_sent = 0
+        packets_received = 0
+        latencies = []
+        
+        for i in range(self.count):
+            packets_sent += 1
+            try:
+                result = ping3.ping(self.target, timeout=2)
+                if result is not None:
+                    packets_received += 1
+                    latencies.append(result * 1000)  # Convert to ms
+            except Exception as e:
+                logger.debug(f"Packet {i+1} lost: {str(e)}")
+        
+        packets_lost = packets_sent - packets_received
+        packet_loss_percent = round((packets_lost / packets_sent) * 100, 1) if packets_sent > 0 else 100
+        
+        return {
+            'packets_sent': packets_sent,
+            'packets_received': packets_received,
+            'packets_lost': packets_lost,
+            'packet_loss_percent': packet_loss_percent,
+            'average_latency': round(sum(latencies) / len(latencies), 2) if latencies else None
+        }

@@ -1,23 +1,48 @@
 import speedtest
+from typing import Dict
+import logging
 
-def run_speed_test():
-    try:
-        st = speedtest.Speedtest()
+logger = logging.getLogger(__name__)
 
-        # find best test server
-        st.get_best_server()
-        download_speed = st.download()
-        upload_speed = st.upload()
+class SpeedTestDiagnostic:
+    def __init__(self):
+        self.st = None
+    
+    def run_test(self) -> Dict:
+        try:
+            logger.info("Initializing speed test...")
+            self.st = speedtest.Speedtest()
 
-        results = {
-            "download_mbps": round(download_speed / 1_000_000, 2),
-            "upload_mbps": round(upload_speed / 1_000_000, 2)
-        }
+            logger.info("Getting best server...")
+            try:
+                self.st.get_best_server()
+            except Exception:
+                return {
+                    "download_mbps": None,
+                    "upload_mbps": None,
+                    "ping": None,
+                    "error": "Unable to select speed test server"
+                }
 
-        return results
+            logger.info("Testing download speed...")
+            download_speed = self.st.download() / 1_000_000
 
-    except Exception:
-        return {
-            "download_mbps": None,
-            "upload_mbps": None
-        }
+            logger.info("Testing upload speed...")
+            upload_speed = self.st.upload() / 1_000_000
+
+            return {
+                "download_mbps": round(download_speed, 2),
+                "upload_mbps": round(upload_speed, 2),
+                "ping": round(self.st.results.ping, 2),
+                "server": self.st.results.server.get("sponsor", "Unknown"),
+                "server_location": f"{self.st.results.server.get('name','')} - {self.st.results.server.get('country','')}"
+            }
+
+        except Exception as e:
+            logger.error(f"Speed test error: {str(e)}")
+            return {
+                "download_mbps": None,
+                "upload_mbps": None,
+                "ping": None,
+                "error": "Speed test failed or timed out"
+            }
