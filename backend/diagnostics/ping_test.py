@@ -2,6 +2,8 @@ import ping3
 import statistics
 from typing import Dict, List, Optional
 import logging
+import httpx
+import time
 
 logger = logging.getLogger(__name__)
 
@@ -41,14 +43,33 @@ class PingTest:
                 'jitter': round(max(all_latencies) - min(all_latencies), 2)
             }
         else:
-            results['summary'] = {
-                'average': None,
-                'minimum': None,
-                'maximum': None,
-                'variance': None,
-                'jitter': None,
-                'error': 'No ping responses received'
-            }
+            # Fallback HTTP latency test (for cloud environments where ICMP is blocked)
+            try:
+                times = []
+                for _ in range(5):
+                    start = time.time()
+                    httpx.get("https://www.google.com", timeout=3)
+                    latency = (time.time() - start) * 1000
+                    times.append(latency)
+
+                results['summary'] = {
+                    'average': round(statistics.mean(times), 2),
+                    'minimum': round(min(times), 2),
+                    'maximum': round(max(times), 2),
+                    'variance': round(statistics.variance(times) if len(times) > 1 else 0, 2),
+                    'jitter': round(max(times) - min(times), 2),
+                    'method': 'http_fallback'
+                }
+
+            except Exception:
+                results['summary'] = {
+                    'average': None,
+                    'minimum': None,
+                    'maximum': None,
+                    'variance': None,
+                    'jitter': None,
+                    'error': 'Latency test failed'
+                }
         
         return results
     
