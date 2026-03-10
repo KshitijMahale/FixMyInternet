@@ -139,3 +139,12 @@ async def get_shared_report(report_id: str):
         raise HTTPException(status_code=404, detail="Report not found")
 
     return reports_store[report_id]
+
+@app.post("/diagnostics/analyze")
+async def analyze_results(data: Dict[str, Any]):
+    analysis = diagnostics.analyzer.analyze(data)
+
+    return {
+        **data,
+        "analysis": analysis
+    }

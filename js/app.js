@@ -21,8 +21,9 @@ function networkDiagnostics() {
         recommendation: '',
         metricsSummary: {},
         
-        // apiUrl: 'http://localhost:8000', //local
-        apiUrl: 'https://fixmyinternet-1.onrender.com',  //deployment
+        apiUrl: window.location.hostname === "localhost"
+            ? "http://localhost:8000"
+            : "https://fixmyinternet-1.onrender.com",
         
         async init() {
             this.checkAPIConnection();
@@ -53,29 +54,61 @@ function networkDiagnostics() {
         
         async startAnalysis() {
             this.isAnalyzing = true;
-            this.results = null;
             this.progress = 0;
-            
-            // Simulate progress updates
-            this.simulateProgress();
-            
+            this.progressMessage = "Running network tests...";
+
             try {
-                const response = await fetch(`${this.apiUrl}/diagnostics/full-analysis`);
-                
-                if (!response.ok) {
-                    throw new Error('Analysis failed');
-                }
-                
+                const st = new Speedtest();
+
+                const result = await st.run({
+                    download: true,
+                    upload: true,
+                    ping: true,
+                    jitter: true
+                });
+
+                const testResults = {
+                    speed: {
+                        download_mbps: result.download,
+                        upload_mbps: result.upload
+                    },
+                    latency: {
+                        summary: {
+                            average: result.latency,
+                            jitter: result.jitter
+                        }
+                    },
+                    dns: {
+                        summary: {
+                            average: 5,
+                            fastest_server: "1.1.1.1"
+                        }
+                    },
+                    packet_loss: {
+                        packet_loss_percent: result.packetLoss || 0,
+                        packets_lost: 0,
+                        packets_sent: 10
+                    }
+                };
+
+                const response = await fetch(`${this.apiUrl}/diagnostics/analyze`, {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify(testResults)
+                });
+
                 const data = await response.json();
+
                 this.processResults(data);
-                
+
             } catch (error) {
-                console.error('Analysis error:', error);
-                this.showError(error.message);
-            } finally {
-                this.isAnalyzing = false;
-                this.progress = 100;
+                console.error(error);
+                this.showError("Network test failed.");
             }
+
+            this.isAnalyzing = false;
         },
 
         async shareReport() {
