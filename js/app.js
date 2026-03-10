@@ -22,7 +22,7 @@ function networkDiagnostics() {
         metricsSummary: {},
         
         // apiUrl: 'http://localhost:8000', //local
-        apiUrl: window.location.origin,  //deployment
+        apiUrl: 'https://fixmyinternet-1.onrender.com',  //deployment
         
         async init() {
             this.checkAPIConnection();
