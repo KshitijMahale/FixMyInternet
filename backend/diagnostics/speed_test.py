@@ -1,48 +1,27 @@
-import speedtest
-from typing import Dict
 import logging
+from typing import Dict
+
+import speedtest
 
 logger = logging.getLogger(__name__)
 
+
 class SpeedTestDiagnostic:
-    def __init__(self):
-        self.st = None
-    
     def run_test(self) -> Dict:
         try:
-            logger.info("Initializing speed test...")
-            self.st = speedtest.Speedtest()
-
-            logger.info("Getting best server...")
-            try:
-                self.st.get_best_server()
-            except Exception:
-                return {
-                    "download_mbps": None,
-                    "upload_mbps": None,
-                    "ping": None,
-                    "error": "Unable to select speed test server"
-                }
-
-            logger.info("Testing download speed...")
-            download_speed = self.st.download() / 1_000_000
-
-            logger.info("Testing upload speed...")
-            upload_speed = self.st.upload() / 1_000_000
+            tester = speedtest.Speedtest(secure=True)
+            tester.get_best_server()
+            download_mbps = tester.download() / 1_000_000
+            upload_mbps = tester.upload() / 1_000_000
 
             return {
-                "download_mbps": round(download_speed, 2),
-                "upload_mbps": round(upload_speed, 2),
-                "ping": round(self.st.results.ping, 2),
-                "server": self.st.results.server.get("sponsor", "Unknown"),
-                "server_location": f"{self.st.results.server.get('name','')} - {self.st.results.server.get('country','')}"
+                "download_mbps": round(download_mbps, 2),
+                "upload_mbps": round(upload_mbps, 2),
             }
-
-        except Exception as e:
-            logger.error(f"Speed test error: {str(e)}")
+        except Exception as exc:
+            logger.warning("Speed test failed: %s", exc)
             return {
                 "download_mbps": None,
                 "upload_mbps": None,
-                "ping": None,
-                "error": "Speed test failed or timed out"
+                "error": "Speed test failed.",
             }

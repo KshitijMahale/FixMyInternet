@@ -1,109 +1,87 @@
-import ping3
+import logging
 import statistics
 from typing import Dict, List, Optional
-import logging
-import httpx
-import time
+
+import ping3
 
 logger = logging.getLogger(__name__)
 
+
 class PingTest:
-    def __init__(self):
-        self.targets = [
-            "8.8.8.8",    # Google DNS
-            "1.1.1.1",    # Cloudflare DNS
-            "8.8.4.4",    # Google DNS Secondary
-            "9.9.9.9"     # Quad9 DNS
-        ]
-        ping3.EXCEPTIONS = True
-    
+    def __init__(self) -> None:
+        self.targets = ["8.8.8.8", "1.1.1.1", "8.8.4.4", "9.9.9.9"]
+        self.pings_per_target = 5
+        ping3.EXCEPTIONS = False
+
     def run_test(self) -> Dict:
-        """Run ping test to multiple targets"""
-        results = {
-            'targets': {},
-            'summary': {}
-        }
-        
-        all_latencies = []
-        
+        all_latencies: List[float] = []
+        targets_result: Dict[str, Dict] = {}
+
         for target in self.targets:
-            target_results = self._ping_target(target)
-            results['targets'][target] = target_results
-            
-            if target_results['latencies']:
-                all_latencies.extend(target_results['latencies'])
-        
-        # Calculate overall summary
-        if all_latencies:
-            results['summary'] = {
-                'average': round(statistics.mean(all_latencies), 2),
-                'minimum': round(min(all_latencies), 2),
-                'maximum': round(max(all_latencies), 2),
-                'variance': round(statistics.variance(all_latencies) if len(all_latencies) > 1 else 0, 2),
-                'jitter': round(max(all_latencies) - min(all_latencies), 2)
-            }
-        else:
-            # Fallback HTTP latency test (for cloud environments where ICMP is blocked)
-            try:
-                times = []
-                for _ in range(5):
-                    start = time.time()
-                    httpx.get("https://www.google.com", timeout=3)
-                    latency = (time.time() - start) * 1000
-                    times.append(latency)
+            target_data = self._ping_target(target, self.pings_per_target)
+            targets_result[target] = target_data
+            all_latencies.extend(target_data["latencies_ms"])
 
-                results['summary'] = {
-                    'average': round(statistics.mean(times), 2),
-                    'minimum': round(min(times), 2),
-                    'maximum': round(max(times), 2),
-                    'variance': round(statistics.variance(times) if len(times) > 1 else 0, 2),
-                    'jitter': round(max(times) - min(times), 2),
-                    'method': 'http_fallback'
-                }
+        return {
+            "targets": targets_result,
+            "summary": self._build_summary(all_latencies),
+        }
 
-            except Exception:
-                results['summary'] = {
-                    'average': None,
-                    'minimum': None,
-                    'maximum': None,
-                    'variance': None,
-                    'jitter': None,
-                    'error': 'Latency test failed'
-                }
-        
-        return results
-    
-    def _ping_target(self, target: str, count: int = 5) -> Dict:
-        """Ping a single target multiple times"""
-        latencies = []
-        errors = 0
-        
+    def _ping_target(self, target: str, count: int) -> Dict:
+        latencies: List[float] = []
+
         for _ in range(count):
             try:
-                result = ping3.ping(target, timeout=2)
-                if result is not None:
-                    # Convert to milliseconds
-                    latencies.append(result * 1000)
-                else:
-                    errors += 1
-            except Exception as e:
-                logger.error(f"Ping error for {target}: {str(e)}")
-                errors += 1
-        
-        if latencies:
+                response_seconds = ping3.ping(target, timeout=2)
+                if response_seconds is not None:
+                    latencies.append(round(response_seconds * 1000, 2))
+            except Exception as exc:
+                logger.warning("Ping failed for %s: %s", target, exc)
+
+        sent = count
+        received = len(latencies)
+        return {
+            "attempts": sent,
+            "successful_pings": received,
+            "latencies_ms": latencies,
+            "average_latency_ms": self._mean(latencies),
+            "minimum_latency_ms": round(min(latencies), 2) if latencies else None,
+            "maximum_latency_ms": round(max(latencies), 2) if latencies else None,
+            "variance_ms2": self._variance(latencies),
+            "packet_loss_percent": round(((sent - received) / sent) * 100, 2) if sent else None,
+        }
+
+    def _build_summary(self, latencies: List[float]) -> Dict:
+        if not latencies:
             return {
-                'latencies': latencies,
-                'average': round(statistics.mean(latencies), 2),
-                'minimum': round(min(latencies), 2),
-                'maximum': round(max(latencies), 2),
-                'packet_loss': round((errors / count) * 100, 1)
+                "average_latency_ms": None,
+                "minimum_latency_ms": None,
+                "maximum_latency_ms": None,
+                "variance_ms2": None,
+                "jitter_ms": None,
+                "error": "No successful ICMP responses.",
             }
-        else:
-            return {
-                'latencies': [],
-                'average': None,
-                'minimum': None,
-                'maximum': None,
-                'packet_loss': 100.0,
-                'error': 'All pings failed'
-            }
+
+        min_latency = round(min(latencies), 2)
+        max_latency = round(max(latencies), 2)
+        return {
+            "average_latency_ms": self._mean(latencies),
+            "minimum_latency_ms": min_latency,
+            "maximum_latency_ms": max_latency,
+            "variance_ms2": self._variance(latencies),
+            "jitter_ms": round(max_latency - min_latency, 2),
+        }
+
+    @staticmethod
+    def _mean(values: List[float]) -> Optional[float]:
+        if not values:
+            return None
+        return round(statistics.mean(values), 2)
+
+    @staticmethod
+    def _variance(values: List[float]) -> Optional[float]:
+        if not values:
+            return None
+        if len(values) == 1:
+            return 0.0
+        return round(statistics.variance(values), 2)

@@ -21,9 +21,8 @@ function networkDiagnostics() {
         recommendation: '',
         metricsSummary: {},
         
-        apiUrl: window.location.hostname === "localhost"
-            ? "http://localhost:8000"
-            : "https://fixmyinternet-1.onrender.com",
+        apiUrl: "http://localhost:8000",
+        // apiUrl: "https://fixmyinternet-1.onrender.com",
         
         async init() {
             this.checkAPIConnection();
