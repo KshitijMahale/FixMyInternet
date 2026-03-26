@@ -4,7 +4,6 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>FixMyInternet</title>
-  <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -39,8 +38,8 @@
       </ul>
     </section>
 
-    <section id="resultsSection" class="hidden results-shell grid grid-cols-1 gap-4 lg:grid-cols-12">
-      <div class="left-primary lg:col-span-8 grid gap-4">
+    <section id="resultsSection" class="hidden results-shell layout-grid">
+      <div class="left-primary left-col">
         <article class="panel summary-panel">
           <h2>Connection Summary</h2>
           <p id="connectionSummary">Run diagnostics to get a plain-English summary.</p>
@@ -79,7 +78,7 @@
         </article>
       </div>
 
-      <aside class="right-secondary lg:col-span-4 grid gap-4">
+      <aside class="right-secondary right-col">
         <article class="panel metric-card connection-info-card">
           <h3>Connection Info</h3>
           <p><span class="info-label">ISP:</span> <span id="connectionIsp">-</span></p>
@@ -131,6 +130,6 @@
     </section>
   </main>
 
-  <script src="/js/app.js"></script>
+  <script src="/js/app.js?v=20260326"></script>
 </body>
 </html>

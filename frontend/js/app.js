@@ -20,6 +20,21 @@ const state = {
   stepDurations: [1500, 2000, 1200, 1800, 1000]
 };
 
+const REQUIRED_ELEMENT_KEYS = [
+  "analyzeBtn",
+  "progressPanel",
+  "progressMessage",
+  "resultsSection",
+  "connectionSummary",
+  "healthChecklist",
+  "healthScore",
+  "healthGrade",
+  "diagnosis",
+  "explanation",
+  "recommendation",
+  "suggestionList",
+];
+
 const elements = {
   analyzeBtn: document.getElementById("analyzeBtn"),
   progressPanel: document.getElementById("progressPanel"),
@@ -277,6 +292,8 @@ function setLoaderStep(stepIndex) {
 }
 
 function startProgressSimulation() {
+  if (!elements.progressPanel || !elements.resultsSection) return;
+
   elements.progressPanel.classList.remove("hidden");
   elements.progressPanel.classList.remove("fading-out");
   elements.progressPanel.classList.add("is-visible");
@@ -294,22 +311,24 @@ function startProgressSimulation() {
   runProgressSteps();
 
   function runProgressSteps() {
-    if (state.progressStepIndex < state.stagedMessages.length) {
+    const maxIndex = state.stagedMessages.length - 1;
+    const currentIndex = Math.min(state.progressStepIndex, maxIndex);
+    setLoaderStep(currentIndex);
 
-      setLoaderStep(state.progressStepIndex);
-
-      const delay = state.stepDurations?.[state.progressStepIndex] || 1200;
-
+    const delay = state.stepDurations?.[currentIndex] || 1200;
+    if (state.progressStepIndex < maxIndex) {
       state.progressStepIndex++;
-
-      state.progressTimer = setTimeout(runProgressSteps, delay);
     }
+
+    state.progressTimer = setTimeout(runProgressSteps, delay);
   }
 }
 
 function completeProgressAndShowResults() {
+  if (!elements.progressPanel || !elements.resultsSection) return;
+
   if (state.progressTimer) {
-    clearInterval(state.progressTimer);
+    clearTimeout(state.progressTimer);
     state.progressTimer = null;
   }
 
@@ -472,13 +491,21 @@ function renderResults(data) {
 }
 
 async function runDiagnostics() {
+  if (!elements.analyzeBtn) return;
+
   elements.analyzeBtn.disabled = true;
   elements.analyzeBtn.textContent = "Running...";
   startProgressSimulation();
 
   try {
     await fetchConnectionInfo();
-    const response = await fetch(`${API_BASE}/diagnostics/full-analysis`);
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 90000);
+    const response = await fetch(`${API_BASE}/diagnostics/full-analysis`, {
+      signal: controller.signal,
+    });
+    clearTimeout(timeoutId);
+
     if (!response.ok) {
       throw new Error(`Request failed with status ${response.status}`);
     }
@@ -490,7 +517,10 @@ async function runDiagnostics() {
     elements.connectionSummary.textContent = "Diagnostics could not be completed.";
     renderList(elements.healthChecklist, [], "Checklist unavailable right now.");
     elements.diagnosis.textContent = "Analysis failed";
-    elements.explanation.textContent = "Unable to complete diagnostics right now.";
+    elements.explanation.textContent =
+      error && error.name === "AbortError"
+        ? "Diagnostics timed out. Some network tests can be slow on hosted environments."
+        : "Unable to complete diagnostics right now.";
     elements.recommendation.textContent = "Check backend logs and try again.";
     renderList(elements.suggestionList, [], "Retry in a moment.");
     completeProgressAndShowResults();
@@ -500,4 +530,9 @@ async function runDiagnostics() {
   }
 }
 
-elements.analyzeBtn.addEventListener("click", runDiagnostics);
+const missingElements = REQUIRED_ELEMENT_KEYS.filter((key) => !elements[key]);
+if (missingElements.length > 0) {
+  console.error("FixMyInternet UI is missing required DOM elements:", missingElements);
+} else {
+  elements.analyzeBtn.addEventListener("click", runDiagnostics);
+}

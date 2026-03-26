@@ -41,19 +41,34 @@ class NetworkDiagnostics:
         self.speed_test = SpeedTestDiagnostic()
         self.analyzer = RootCauseAnalyzer()
 
-    async def _run_safely(self, test_name: str, test_fn: Callable[[], Dict[str, Any]]) -> Dict[str, Any]:
+    async def _run_safely(
+        self,
+        test_name: str,
+        test_fn: Callable[[], Dict[str, Any]],
+        timeout_seconds: float = 35.0,
+    ) -> Dict[str, Any]:
         try:
             logger.info("Running %s", test_name)
-            return await asyncio.to_thread(test_fn)
+            return await asyncio.wait_for(asyncio.to_thread(test_fn), timeout=timeout_seconds)
+        except asyncio.TimeoutError:
+            logger.warning("%s timed out after %ss", test_name, timeout_seconds)
+            return {"error": f"{test_name} timed out"}
         except Exception as exc:
             logger.exception("%s failed", test_name)
             return {"error": f"{test_name} failed: {exc}"}
 
     async def run_full_analysis(self) -> Dict[str, Any]:
-        latency = await self._run_safely("latency test", self.ping_test.run_test)
-        dns = await self._run_safely("dns test", self.dns_test.run_test)
-        packet_loss = await self._run_safely("packet loss test", self.packet_loss_test.run_test)
-        speed = await self._run_safely("speed test", self.speed_test.run_test)
+        latency_task = self._run_safely("latency test", self.ping_test.run_test, timeout_seconds=20.0)
+        dns_task = self._run_safely("dns test", self.dns_test.run_test, timeout_seconds=20.0)
+        packet_loss_task = self._run_safely("packet loss test", self.packet_loss_test.run_test, timeout_seconds=20.0)
+        speed_task = self._run_safely("speed test", self.speed_test.run_test, timeout_seconds=45.0)
+
+        latency, dns, packet_loss, speed = await asyncio.gather(
+            latency_task,
+            dns_task,
+            packet_loss_task,
+            speed_task,
+        )
 
         diagnostics_result = {
             "speed": speed,
