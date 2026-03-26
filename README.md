@@ -2,6 +2,8 @@
 
 FixMyInternet is a production-ready web app that runs deep internet diagnostics and explains network issues in human language.
 
+https://fixmyinternet-1.onrender.com/
+
 It answers three user questions:
 1. How good is my internet connection?
 2. What problem is affecting my internet?

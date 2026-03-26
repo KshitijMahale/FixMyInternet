@@ -27,62 +27,107 @@
       <button id="analyzeBtn" class="analyze-btn">Analyze My Internet</button>
     </section>
 
-    <section id="progressPanel" class="panel hidden">
-      <div class="progress-head">
-        <h2>Running full diagnostics</h2>
-        <span id="progressPct">0%</span>
-      </div>
-      <p id="progressMessage">Preparing tests...</p>
-      <div class="progress-track">
-        <div id="progressBar" class="progress-fill"></div>
-      </div>
+    <section id="progressPanel" class="panel loader-panel hidden" aria-live="polite">
+      <h2>Running diagnostics</h2>
+      <p id="progressMessage">Testing Speed...</p>
+      <ul id="progressSteps" class="loader-steps">
+        <li data-step="0" class="active">Testing Speed...</li>
+        <li data-step="1">Testing Latency...</li>
+        <li data-step="2">Testing DNS...</li>
+        <li data-step="3">Checking Packet Loss...</li>
+        <li data-step="4">Analyzing Connection...</li>
+      </ul>
     </section>
 
-    <section id="resultsSection" class="results-grid hidden">
-      <article class="panel score-panel">
-        <h2>Connection Health</h2>
-        <div class="gauge-wrap">
-          <canvas id="healthGauge" width="280" height="280"></canvas>
-          <div class="gauge-labels">
-            <strong id="healthScore">0</strong>
-            <span id="healthGrade">Needs Attention</span>
+    <section id="resultsSection" class="hidden results-shell grid grid-cols-1 gap-4 lg:grid-cols-12">
+      <div class="left-primary lg:col-span-8 grid gap-4">
+        <article class="panel summary-panel">
+          <h2>Connection Summary</h2>
+          <p id="connectionSummary">Run diagnostics to get a plain-English summary.</p>
+          <div id="instabilityAlert" class="insight-alert hidden" role="status" aria-live="polite">
+            <strong>Warning:</strong> Your connection is unstable.
           </div>
-        </div>
-      </article>
+          <div id="slowInternetInsight" class="slow-internet-insight hidden" role="note">
+            Even if your speed looks good, instability (jitter) can cause lag, buffering, or call drops.
+          </div>
+          <ul id="healthChecklist" class="checklist"></ul>
+        </article>
 
-      <article class="panel diagnosis-panel">
-        <h2>Diagnosis</h2>
-        <h3 id="diagnosis">Pending analysis...</h3>
-        <p id="explanation">Run diagnostics to see what is affecting your connection.</p>
-        <div class="recommendation">
-          <p class="label">Suggested Fix</p>
-          <p id="recommendation">No recommendation yet.</p>
-        </div>
-      </article>
+        <article class="panel score-panel">
+          <h2>Connection Health</h2>
+          <div class="gauge-wrap">
+            <canvas id="healthGauge" width="280" height="280"></canvas>
+            <div class="gauge-labels">
+              <strong id="healthScore">0</strong>
+              <span id="healthGrade">Needs Attention</span>
+            </div>
+          </div>
+        </article>
 
-      <article class="panel metric-card">
-        <h3>Speed</h3>
-        <p><span id="downloadSpeed">-</span> Mbps download</p>
-        <p><span id="uploadSpeed">-</span> Mbps upload</p>
-      </article>
+        <article class="panel diagnosis-panel">
+          <h2>Diagnosis</h2>
+          <h3 id="diagnosis">Pending analysis...</h3>
+          <p id="explanation">Run diagnostics to see what is affecting your connection.</p>
+          <div class="recommendation">
+            <p class="label">Primary Recommendation</p>
+            <p id="recommendation">No recommendation yet.</p>
+          </div>
+          <div class="recommendation suggestion-block">
+            <p class="label">Suggested Next Steps</p>
+            <ul id="suggestionList" class="suggestion-list"></ul>
+          </div>
+        </article>
+      </div>
 
-      <article class="panel metric-card">
-        <h3>Latency</h3>
-        <p><span id="latencyAvg">-</span> ms average</p>
-        <p><span id="latencyJitter">-</span> ms jitter</p>
-      </article>
+      <aside class="right-secondary lg:col-span-4 grid gap-4">
+        <article class="panel metric-card connection-info-card">
+          <h3>Connection Info</h3>
+          <p><span class="info-label">ISP:</span> <span id="connectionIsp">-</span></p>
+          <p><span class="info-label">Location:</span> <span id="connectionLocation">-</span></p>
+          <p><span class="info-label">Server:</span> <span id="connectionServer">-</span></p>
+          <p><span class="info-label">IP:</span> <span id="connectionIp">-</span></p>
+        </article>
 
-      <article class="panel metric-card">
-        <h3>DNS</h3>
-        <p><span id="dnsAvg">-</span> ms average</p>
-        <p id="dnsFastest">Fastest: -</p>
-      </article>
+        <article class="panel metric-card">
+          <h3>Speed</h3>
+          <p>Download: <span id="downloadSpeed">-</span> Mbps <span class="inline-rating" id="downloadLabel">-</span></p>
+          <p>Upload: <span id="uploadSpeed">-</span> Mbps <span class="inline-rating" id="uploadLabel">-</span></p>
+          <p class="metric-rating" id="speedRating">-</p>
+          <p class="metric-help" id="speedMeaning">-</p>
+        </article>
 
-      <article class="panel metric-card">
-        <h3>Packet Loss</h3>
-        <p><span id="packetLoss">-</span>%</p>
-        <p><span id="packetLossCounts">-</span></p>
-      </article>
+        <article class="panel metric-card">
+          <h3>Latency</h3>
+          <p>Average: <span id="latencyAvg">-</span> ms</p>
+          <p>Best: <span id="latencyBest">-</span> ms</p>
+          <p>Worst: <span id="latencyWorst">-</span> ms</p>
+          <p class="metric-rating" id="latencyRating">-</p>
+          <p class="metric-help" id="latencyMeaning">-</p>
+        </article>
+
+        <article class="panel metric-card">
+          <h3>DNS</h3>
+          <p><span id="dnsAvg">-</span> ms average</p>
+          <p id="dnsFastest">Fastest: -</p>
+          <p class="metric-rating" id="dnsRating">-</p>
+          <p class="metric-help" id="dnsMeaning">-</p>
+        </article>
+
+        <article class="panel metric-card">
+          <h3>Packet Loss</h3>
+          <p><span id="packetLoss">-</span>%</p>
+          <p><span id="packetLossCounts">-</span></p>
+          <p class="metric-rating" id="packetRating">-</p>
+          <p class="metric-help" id="packetMeaning">-</p>
+        </article>
+
+        <article class="panel metric-card">
+          <h3>Stability</h3>
+          <p><span id="stabilityJitter">-</span> ms jitter</p>
+          <p class="metric-rating" id="stabilityRating">-</p>
+          <p class="metric-help" id="stabilityMeaning">-</p>
+        </article>
+      </aside>
     </section>
   </main>
 
